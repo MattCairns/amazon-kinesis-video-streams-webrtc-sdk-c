@@ -10,6 +10,7 @@ project(KinesisVideoWebRTCClient VERSION 1.10.1 LANGUAGES C)
 # User Flags
 option(ADD_MUCLIBC "Add -muclibc c flag" OFF)
 option(BUILD_DEPENDENCIES "Whether or not to build depending libraries from source" ON)
+option(BUILD_KVS_COMMON_LWS "Whether or not to build KvsCommonLws from source" ON)
 option(USE_OPENSSL "Use openssl as crypto library" ON)
 option(USE_MBEDTLS "Use mbedtls as crypto library" OFF)
 option(BUILD_STATIC_LIBS "Build all libraries statically. (This includes third-party libraries.)" OFF)
@@ -250,20 +251,26 @@ if(BUILD_DEPENDENCIES)
   message(STATUS "Finished building dependencies.")
 endif()
 
-# building kvsCommonLws also builds kvspic
-set(BUILD_ARGS
-        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-        -DBUILD_STATIC=${BUILD_STATIC_LIBS}
-        -DUSE_OPENSSL=${USE_OPENSSL}
-        -DUSE_MBEDTLS=${USE_MBEDTLS}
-        -DKVS_DEFAULT_STACK_SIZE=${KVS_DEFAULT_STACK_SIZE}
-        -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS})
-build_dependency(kvsCommonLws ${BUILD_ARGS})
+find_package(PkgConfig)
+if(BUILD_KVS_COMMON_LWS) 
+  # building kvsCommonLws also builds kvspic
+  set(BUILD_ARGS
+          -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+          -DBUILD_STATIC=${BUILD_STATIC_LIBS}
+          -DUSE_OPENSSL=${USE_OPENSSL}
+          -DUSE_MBEDTLS=${USE_MBEDTLS}
+          -DKVS_DEFAULT_STACK_SIZE=${KVS_DEFAULT_STACK_SIZE}
+          -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS})
+  build_dependency(kvsCommonLws ${BUILD_ARGS})
+else()
+  find_package(libkvsCommonLws REQUIRED)
+  set(OPEN_SRC_INCLUDE_DIRS ${OPEN_SRC_INCLUDE_DIRS} ${LIBKVSCOMMONLWS_INCLUDE_DIRS})
+  link_directories(${LIBKVSCOMMONLWS_LIBRARY_DIRS})
+endif()
 
 ############# find dependent libraries ############
 
 find_package(Threads)
-find_package(PkgConfig REQUIRED)
 if (USE_OPENSSL)
   find_package(OpenSSL REQUIRED)
   set(OPEN_SRC_INCLUDE_DIRS ${OPEN_SRC_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
