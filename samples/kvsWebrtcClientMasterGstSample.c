@@ -209,11 +209,12 @@ PVOID sendGstreamerAudioVideo(PVOID args)
                 }
                 case DEVICE_SOURCE: {
                     senderPipeline = gst_parse_launch(
-                        "v4l2src device=/dev/video3 ! video/x-raw, format=NV12, width=640, height=512 ! videoconvert ! \
-                        clockoverlay time-format=\"%Y-%m-%d %H:%M:%S UTC\" timezone=\"UTC\" ! \
+                        "udpsrc port=12456 caps=\"application/x-rtp,media=video,encoding-name=H264,payload=96\" ! rtph264depay ! h264parse ! decodebin ! nvvidconv ! \
                         x264enc name=sampleVideoEncoder bframes=0 speed-preset=veryfast bitrate=100 byte-stream=TRUE tune=zerolatency ! \
                         video/x-h264,stream-format=byte-stream,alignment=au,profile=baseline ! appsink sync=TRUE emit-signals=TRUE name=appsink-video",
                         &error);
+// "udpsrc port=12456 caps=\"application/x-rtp,media=video,encoding-name=H264,payload=96\" ! \
+// rtph264depay ! h264parse ! decodebin ! videoconvert ! appsink sync=TRUE emit-signals=TRUE name=appsink-video", &error);
                     break;
                 }
                 case RTSP_SOURCE: {
