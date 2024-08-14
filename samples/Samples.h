@@ -172,6 +172,8 @@ typedef struct {
     PCHAR rtspUri;
     UINT32 logLevel;
     BOOL enableTwcc;
+
+    long GstUdpPort;
 } SampleConfiguration, *PSampleConfiguration;
 
 typedef struct {

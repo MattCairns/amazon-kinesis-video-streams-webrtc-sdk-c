@@ -208,13 +208,17 @@ PVOID sendGstreamerAudioVideo(PVOID args)
                     break;
                 }
                 case DEVICE_SOURCE: {
-                    senderPipeline = gst_parse_launch(
-                        "udpsrc port=12456 caps=\"application/x-rtp,media=video,encoding-name=H264,payload=96\" ! rtph264depay ! h264parse ! decodebin ! nvvidconv ! \
+                    char* pipeline;
+                    asprintf(&pipeline, "udpsrc port=%d caps=\"application/x-rtp,media=video,encoding-name=H264,payload=96\" ! rtph264depay ! h264parse ! decodebin ! nvvidconv ! \
                         x264enc name=sampleVideoEncoder bframes=0 speed-preset=veryfast bitrate=100 byte-stream=TRUE tune=zerolatency ! \
-                        video/x-h264,stream-format=byte-stream,alignment=au,profile=baseline ! appsink sync=TRUE emit-signals=TRUE name=appsink-video",
-                        &error);
-// "udpsrc port=12456 caps=\"application/x-rtp,media=video,encoding-name=H264,payload=96\" ! \
-// rtph264depay ! h264parse ! decodebin ! videoconvert ! appsink sync=TRUE emit-signals=TRUE name=appsink-video", &error);
+                        video/x-h264,stream-format=byte-stream,alignment=au,profile=baseline ! appsink sync=TRUE emit-signals=TRUE name=appsink-video" , pSampleConfiguration->GstUdpPort);
+
+                    senderPipeline = gst_parse_launch(pipeline, &error);
+                    // senderPipeline = gst_parse_launch(
+                    //     "udpsrc port=12456 caps=\"application/x-rtp,media=video,encoding-name=H264,payload=96\" ! rtph264depay ! h264parse ! decodebin ! nvvidconv ! \
+                    //     x264enc name=sampleVideoEncoder bframes=0 speed-preset=veryfast bitrate=100 byte-stream=TRUE tune=zerolatency ! \
+                    //     video/x-h264,stream-format=byte-stream,alignment=au,profile=baseline ! appsink sync=TRUE emit-signals=TRUE name=appsink-video",
+                    //     &error);
                     break;
                 }
                 case RTSP_SOURCE: {
@@ -387,7 +391,7 @@ INT32 main(INT32 argc, CHAR* argv[])
             }
         }
     }
-
+    
     pSampleConfiguration->videoSource = sendGstreamerAudioVideo;
     pSampleConfiguration->mediaType = SAMPLE_STREAMING_VIDEO_ONLY;
     pSampleConfiguration->audioCodec = audioCodec;
@@ -444,6 +448,34 @@ INT32 main(INT32 argc, CHAR* argv[])
     } else {
         DLOGI("[KVS GStreamer Master] Using device source in GStreamer");
     }
+
+    if (argc > 4) {
+        pSampleConfiguration->GstUdpPort = 0;
+        char *buff = argv[4];
+        char *end;
+        errno = 0;
+        const long sl = strtol(buff, &end, 10);
+
+        if (end == buff) {
+            (void) fprintf(stderr, "%s: not a decimal number\n", buff);
+            exit(EXIT_FAILURE);
+        } else if ('\0' != *end) {
+            (void) fprintf(stderr, "%s: extra characters at end of input: %s\n", buff, end);
+            exit(EXIT_FAILURE);
+        } else if ((LONG_MIN == sl || LONG_MAX == sl) && ERANGE == errno) {
+            (void) fprintf(stderr, "%s out of range of type long\n", buff);
+            exit(EXIT_FAILURE);
+        } else if (sl > INT_MAX) {
+            (void) fprintf(stderr, "%ld greater than INT_MAX\n", sl);
+            exit(EXIT_FAILURE);
+        } else if (sl < INT_MIN) {
+            (void) fprintf(stderr, "%ld less than INT_MIN\n", sl);
+            exit(EXIT_FAILURE);
+        } else {
+            pSampleConfiguration->GstUdpPort = sl;
+        }
+    }
+
 
     switch (pSampleConfiguration->mediaType) {
         case SAMPLE_STREAMING_VIDEO_ONLY:
